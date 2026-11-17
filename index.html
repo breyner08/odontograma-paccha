@@ -643,7 +643,7 @@ function toSVG(pg){
 function toPDF(pages){
   const K=842/1280,objs=[];const add=s=>{objs.push(s);return objs.length};
   const fonts=['Helvetica','Helvetica-Bold','Helvetica-Oblique','Helvetica-BoldOblique'].map(n=>add('<< /Type /Font /Subtype /Type1 /BaseFont /'+n+' /Encoding /WinAnsiEncoding >>'));
-  const enc=s=>{let o='';for(const ch of s){let c=ch.charCodeAt(0);if(c>255)c=63;const k=String.fromCharCode(c);o+=(k==='\\'||k==='('||k===')')?'\\'+k:k}return o};
+  const enc=s=>{let o='';for(const ch of s){let c=ch.charCodeAt(0);if(c>255){c={8220:147,8221:148,8216:145,8217:146,8230:133,8211:150,8212:151,8226:149,8364:128}[c]||63}const k=String.fromCharCode(c);o+=(k==='\\'||k==='('||k===')')?'\\'+k:k}return o};
   const n=v=>(Math.round(v*100)/100).toString();
   const pageIds=[];const kids=[];const pagesId=objs.length+1+pages.length*2;
   for(const pg of pages){
