@@ -8,3 +8,5 @@ export const FIREBASE_CONFIG = {
   appId: "1:345178341467:web:556b3dd6d7b761ba593f7e"
 };
 export const ALLOWED_EMAIL = "";
+// Versión oficial.
+export const ENV = { suffix: "", ls: "cpod_", appName: "", label: "", version: "2.1" };
