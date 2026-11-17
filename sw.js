@@ -1,5 +1,5 @@
 // Service worker: guarda la app en el equipo para que abra sin señal.
-const VERSION = 'v2.0.0';
+const VERSION = 'v2.0.1';
 const CACHE = 'cpod-paccha-' + VERSION;
 const FB = 'https://www.gstatic.com/firebasejs/10.12.2/';
 const PRECACHE = ['./', 'index.html', 'config.js', 'manifest.json', 'icon-180.png', 'icon-192.png', 'icon-512.png',
