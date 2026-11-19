@@ -40,6 +40,7 @@ button{font:inherit;cursor:pointer;-webkit-tap-highlight-color:transparent}
 .muted{color:var(--tx2);font-size:13px}
 .msg{font-size:13px;padding:8px 10px;border-radius:8px;background:var(--warnbg);color:var(--warn);margin-top:8px}
 .msg.ok{background:var(--acs);color:var(--ac)}
+.scanq{outline:2px solid #f59e0b!important;outline-offset:2px;border-radius:8px}
 .hide{display:none!important}
 /* paleta */
 .pal{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:6px;margin-bottom:8px}
@@ -107,6 +108,8 @@ table.t td:last-child{text-align:right;font-weight:600}
 <section id="vNew">
   <div class="card">
     <h2 id="ftitle">Datos del paciente</h2>
+    <div id="scanBar" class="row hide" style="margin:-4px 0 10px;align-items:center;gap:8px"><button class="btn sm" id="bScan">📷 Escanear ficha CPOD</button><span class="muted" style="font-size:12px">Solo con internet · llena el formulario sin guardarlo</span><input type="file" id="scanFile" accept="image/*" multiple class="hide"></div>
+    <div id="scanMsg" class="msg hide" style="margin:0 0 10px"></div>
     <div class="grid">
       <label class="f" style="grid-column:1/-1;position:relative">Nombre y apellidos<input id="fNom" name="paciente_x" autocomplete="off" autocorrect="off" autocapitalize="words" spellcheck="false" placeholder="Escribe el nombre"><div class="sug hide" id="fSug"></div></label>
       <datalist id="names"></datalist>
@@ -199,6 +202,15 @@ table.t td:last-child{text-align:right;font-weight:600}
 <section id="vCap" class="hide">
   <div class="card">
     <h2 id="capTitle">CAPSO · datos de la persona</h2>
+    <div id="cScanBar" class="hide" style="margin:-4px 0 10px"><div class="row" style="align-items:center;gap:8px"><button class="btn sm" id="bCScan">📷 Escanear CAPSO (2 caras)</button><span class="muted" style="font-size:12px">Solo con internet · llena el cuestionario sin guardarlo</span></div><div id="cScanStep" class="row hide" style="gap:8px;margin-top:8px"><button class="btn sm pri" id="bCScan2">📷 Cara 2</button><button class="btn sm" id="bCScanGo">Leer solo la cara 1</button><button class="btn sm" id="bCScanX">Cancelar</button></div><input type="file" id="cScanFile" accept="image/*" multiple class="hide"></div>
+    <div id="cScanMsg" class="msg hide" style="margin:0 0 10px"></div>
+    <div style="margin:0 0 10px"><button class="btn sm" id="bCDict">🎙 Dictar CAPSO</button></div>
+    <div id="cDictBox" class="hide" style="margin:0 0 12px;border:1px solid var(--bd);border-radius:10px;padding:10px">
+      <div class="muted" style="font-size:12px;margin-bottom:6px">Dicta o escribe. Ejemplo: «paciente Luis Nima Cáceres, DNI 76543210, 14 años, masculino, tercero A del colegio Dos de Mayo, CAPSO 1, el día de hoy. Pregunta 1: dulces, gaseosa, galletas porque pican los dientes. Pregunta 2: … Pregunta 6 punto 1: … Pregunta 17: sí…». En 17–24: «sí» = de acuerdo, «no sabe» = ni de acuerdo ni en desacuerdo, «no» = en desacuerdo. Si en cualquier pregunta dices «no sabe», se toma como desconocimiento. Funciona sin internet con el micrófono del teclado; di «coma» para separar los alimentos.</div>
+      <textarea id="cDict" rows="6" style="width:100%" placeholder="Toca aquí y usa el micrófono del teclado, o el botón Escuchar"></textarea>
+      <div class="row" style="gap:8px;margin-top:8px"><button class="btn sm hide" id="bCListen">🎙 Escuchar</button><button class="btn sm pri" id="bCDictGo">Llenar el CAPSO</button><button class="btn sm" id="bCDictClr">Borrar texto</button></div>
+      <div id="cDictMsg" class="msg hide"></div>
+    </div>
     <div class="grid">
       <label class="f" style="grid-column:1/-1;position:relative">Nombre y apellidos<input id="cNom" name="encuestado_x" autocomplete="off" autocorrect="off" autocapitalize="words" spellcheck="false" placeholder="Escribe el nombre"><div class="sug hide" id="cSug"></div></label>
       <datalist id="names2"></datalist>
@@ -229,6 +241,11 @@ table.t td:last-child{text-align:right;font-weight:600}
     <div id="rMsg" class="msg hide"></div>
   </div>
   <div id="resBody"></div>
+  <div class="card" id="aprCard">
+    <h2>Lo que aprendió el escáner</h2>
+    <div class="muted" style="font-size:13px">Cada vez que guardas una ficha escaneada, la app anota lo que corregiste (sin nombres ni datos del paciente) y se lo recuerda al escáner en las siguientes lecturas.</div>
+    <div id="aprList" style="margin-top:8px"></div>
+  </div>
 </section>
 </main>
 <div id="login" class="hide" style="position:fixed;inset:0;z-index:30;background:var(--bg);display:flex;align-items:center;justify-content:center;padding:20px">
@@ -260,7 +277,7 @@ import {initializeFirestore,persistentLocalCache,persistentMultipleTabManager,co
 import * as CFG from "./config.js";
 const FIREBASE_CONFIG=CFG.FIREBASE_CONFIG,ALLOWED_EMAIL=CFG.ALLOWED_EMAIL||"";
 const IS_BETA=/-beta\//.test(location.pathname);
-const ENV=Object.assign(IS_BETA?{suffix:"_beta",ls:"cpodb_",appName:"beta",label:"BETA",version:"2.1"}:{suffix:"",ls:"cpod_",appName:"",label:"",version:"2.1"},CFG.ENV||{});
+const ENV=Object.assign(IS_BETA?{suffix:"_beta",ls:"cpodb_",appName:"beta",label:"BETA",version:"2.1"}:{suffix:"",ls:"cpod_",appName:"",label:"",version:"2.2"},CFG.ENV||{});
 const LSP=ENV.ls,COL_R="registros"+ENV.suffix,COL_C="capso"+ENV.suffix;
 (function(){
 const $=s=>document.querySelector(s);
@@ -576,7 +593,7 @@ function prefill(){
   if(F.tipo!=='Diagnóstico'&&prev&&prev.dent){F.dent=prev.dent;F.pos=prev.pos?JSON.parse(JSON.stringify(prev.pos)):blankPos(prev.dent,F.edad);ch=true}
   if(ch){if(!F.touched&&F.tipo==='Diagnóstico')F.pos=blankPos(F.dent,F.edad);persist();fillForm();const m=$('#prefMsg');m.textContent='Datos personales cargados de '+P.nombre+' ('+(P.fuente._t?P.fuente.toma:P.fuente.tipo)+', '+toDMY(P.fuente.fecha)+').';m.classList.remove('hide');setTimeout(()=>m.classList.add('hide'),6000)}
 }
-$('#bNuevo').onclick=()=>{F=newForm();cur=firstOf('P');persist();fillForm();$('#saveMsg').classList.add('hide');window.scrollTo(0,0)};
+$('#bNuevo').onclick=()=>{$('#scanMsg').classList.add('hide');document.querySelectorAll('.scanq').forEach(e=>e.classList.remove('scanq'));F=newForm();cur=firstOf('P');persist();fillForm();$('#saveMsg').classList.add('hide');window.scrollTo(0,0)};
 
 /* ---------- guardado y nube ---------- */
 let db=null,dbState='connecting',remote=LS.get(LSP+'cache',{}),pending=LS.get(LSP+'pending',{}),dels=LS.get(LSP+'del',[]),flushing=false,readOnly=false,downloads=null;
@@ -604,7 +621,8 @@ $('#bSave').onclick=()=>{
   const rec={id,nombre:F.nombre.trim(),nac:F.nac||'',dni:F.dni||'',hc:F.hc||'',sis:F.sis||'',dir:F.dir||'',colegio:F.colegio||'',edadYMD:ageYMD(F.nac,F.fecha)||'',est:F.est||estBlank(),edad:+F.edad,sexo:F.sexo,grado:F.grado,tipo:F.tipo,fecha:F.fecha,dent:F.dent,pos:F.pos,iho:F.iho,ipc:F.ipc||[null,null,null,null,null,null],ihoNA:!!F.ihoNA,ihoT:SEXT.map((_,i)=>sextTooth(F,i)),obs:F.obs,creado:F.creado||now,actualizado:now};
   pending[id]=JSON.parse(JSON.stringify(rec));LS.set(LSP+'pending',pending);
   const nm=rec.nombre;
-  F=newForm();F.colegio=rec.colegio;F.grado=rec.grado;F.tipo=rec.tipo;F.fecha=rec.fecha;F.dent=rec.dent;F.pos=blankPos(rec.dent,'');cur=firstOf(F.dent);confirmDup=null;persist();fillForm();
+  if(F._scan){try{aprLearnCpod(F._scan,rec)}catch(e){}}
+  $('#scanMsg').classList.add('hide');document.querySelectorAll('.scanq').forEach(e=>e.classList.remove('scanq'));F=newForm();F.colegio=rec.colegio;F.grado=rec.grado;F.tipo=rec.tipo;F.fecha=rec.fecha;F.dent=rec.dent;F.pos=blankPos(rec.dent,'');cur=firstOf(F.dent);confirmDup=null;persist();fillForm();
   sm.className='msg ok';sm.textContent='Guardado: '+nm+'.'+(warn.length?' Revisa: '+warn.join('; ')+'.':'')+' Listo para el siguiente paciente (se mantienen grado, tipo, fecha y dentición).';sm.classList.remove('hide');
   window.scrollTo({top:0,behavior:'smooth'});
   renderList();flush();
@@ -1046,18 +1064,19 @@ const COMP={
 };
 function compEval(key,text,ovp){const c=COMP[key];const t=NZ(text);const det=c.parts.map(([lab,kw],i)=>{const o=ovp&&ovp[i];return o!=null?o:hasAny(t,kw)});const ok=c.all?det.every(Boolean):det.some(Boolean);return{det,v:ok?c.yes:c.no}}
 function capNormRaw(raw){if(raw&&!raw.legacy&&raw.ovr&&Object.keys(raw.ovr).length>=20){raw.legacy=raw.ovr;raw.ovr={}}return raw}
+const NSB=t=>/^ (no sabe|no se|no sabia|no recuerda|no recuerdo|no conoce|desconoce|no responde|no contesta|ns) $/.test(NZ(t||''));
 function capDerive(raw){
   capNormRaw(raw);
   const A=raw.a||{},O=raw.ovr||{},L=raw.legacy||{},R={},why={},st={};
   const set=(k,v,w,s)=>{if(O[k]!=null){R[k]=O[k];st[k]='manual';why[k]=w||''}else if(v==null&&L[k]!=null&&s!=='revisar'){R[k]=L[k];st[k]='anterior';why[k]='registrado en la versión anterior (sin respuesta escrita)'}else{R[k]=v;st[k]=v==null?(s||'falta'):(s||'auto');why[k]=w||''}};
   // P1 alimentos que dañan
-  {const it=(raw.f1||[]);if(!it.length)set('p5',null,'');else{const cl=it.map(x=>({x,...foodClass(x)}));const non=cl.filter(c=>c.c===false),unk=cl.filter(c=>c.c==null);
+  {const it=(raw.f1||[]);if(!it.length)set('p5',A.q1ns?'No sabe':null,A.q1ns?'respondió «no sabe»':'');else{const cl=it.map(x=>({x,...foodClass(x)}));const non=cl.filter(c=>c.c===false),unk=cl.filter(c=>c.c==null);
     if(non.length)set('p5','No sabe','No cariogénico: '+non.map(c=>c.x).join(', '));else if(unk.length)set('p5',null,'Clasifica: '+unk.map(c=>c.x).join(', '),'revisar');else set('p5','Sabe','Todos cariogénicos ('+it.length+')')}}
   // P2
   {const tx=A.q2||'';if(!tx.trim())set('p6',null);else{const e=compEval('p6',tx,(raw.cp||{}).p6);set('p6',e.v,COMP.p6.parts.map((p,i)=>(e.det[i]?'✓ ':'✗ ')+p[0]).join(' · '))}}
   {const tx=A.q3||'';if(!tx.trim())set('p7',null);else{const e=compEval('p7',tx,(raw.cp||{}).p7);set('p7',e.v,COMP.p7.parts.map((p,i)=>(e.det[i]?'✓ ':'✗ ')+p[0]).join(' · '))}}
-  {const m=parseMonths(A.q4);if(m==null)set('p8',null,A.q4?'No entendí el tiempo; elige manualmente':'',A.q4?'revisar':'falta');else set('p8',m===6?'Sabe':'No sabe','≈ '+m+' meses')}
-  {const t=NZ(A.q5||'');if(!t.trim())set('p9',null);else{let m=null;if(/nacer|recien nacido|primer diente|primeros dientes|antes del ano|antes del primer ano|=bebe/.test(t)||/ bebe /.test(t))m=6;else m=parseMonths(A.q5);
+  {const m=parseMonths(A.q4);if(NSB(A.q4))set('p8','No sabe','respondió «no sabe»');else if(m==null)set('p8',null,A.q4?'No entendí el tiempo; elige manualmente':'',A.q4?'revisar':'falta');else set('p8',m===6?'Sabe':'No sabe','≈ '+m+' meses')}
+  {const t=NZ(A.q5||'');if(!t.trim())set('p9',null);else if(NSB(A.q5))set('p9','No sabe','respondió «no sabe»');else{let m=null;if(/nacer|recien nacido|primer diente|primeros dientes|antes del ano|antes del primer ano|=bebe/.test(t)||/ bebe /.test(t))m=6;else m=parseMonths(A.q5);
     if(m==null)set('p9',null,'No entendí la edad; elige manualmente','revisar');else set('p9',m<12?'Sabe':'No sabe',m<12?'antes del primer año':'≈ '+(m>=12?(Math.round(m/12*10)/10)+' años':m+' meses'))}}
   set('p10',A.q6||null);
   if(A.q6==='No'){['p10.1','p10.2','p10.3'].forEach(k=>set(k,'No sabe','no sabe qué es el flúor'))}
@@ -1072,11 +1091,11 @@ function capDerive(raw){
   {const t=NZ(A.q101||'');const cp=(raw.cp||{});
     if(!t.trim()&&cp.p131==null)set('p13.1',null);else{const v=cp.p131!=null?cp.p131:(/cada comida|despues de comer|despues de cada|luego de cada|despues de las comidas/.test(t)||(/desayun/.test(t)&&/almuerz/.test(t)&&/cena|comida de la noche/.test(t)));set('p13.1',v?'Sí':'No')}
     if(!t.trim()&&cp.p132==null)set('p13.2',null);else{const v=cp.p132!=null?cp.p132:/dormir|acostar|=noche|en la noche|por la noche|antes de la cama/.test(t)||/ noche /.test(t);set('p13.2',v?'Sí':'No')}}
-  {const t=NZ(A.q11||'');if(!t.trim())set('p14',null);else if(/nunca|no ha ido|no fue|no he ido|no recuerd/.test(t))set('p14','Más de 6 meses','nunca o no recuerda');else{const m=parseMonths(A.q11);if(m==null)set('p14',null,'No entendí el tiempo; elige manualmente','revisar');else set('p14',m<=6?'Menos de 6 meses':'Más de 6 meses','≈ '+m+' meses')}}
+  {const t=NZ(A.q11||'');if(!t.trim())set('p14',null);else if(NSB(A.q11))set('p14','Más de 6 meses','respondió «no sabe»');else if(/nunca|no ha ido|no fue|no he ido|no recuerd/.test(t))set('p14','Más de 6 meses','nunca o no recuerda');else{const m=parseMonths(A.q11);if(m==null)set('p14',null,'No entendí el tiempo; elige manualmente','revisar');else set('p14',m<=6?'Menos de 6 meses':'Más de 6 meses','≈ '+m+' meses')}}
   {const tx=A.q12||'';if(!tx.trim())set('p15',null);else{const e=compEval('p15',tx,(raw.cp||{}).p15);set('p15',e.v,e.det[0]?'busca solución profesional':'no menciona ir al dentista')}}
-  {const t=NZ(A.q13||'');if(!t.trim())set('p16',null);else if(/^ (nada|ninguno|ninguna|no|no usa|no uso|ningun) $/.test(t))set('p16','No','no usa remedios caseros');else set('p16','Sí','usa: '+A.q13.trim())}
+  {const t=NZ(A.q13||'');if(!t.trim())set('p16',null);else if(NSB(A.q13))set('p16','No','respondió «no sabe»');else if(/^ (nada|ninguno|ninguna|no|no usa|no uso|ningun) $/.test(t))set('p16','No','no usa remedios caseros');else set('p16','Sí','usa: '+A.q13.trim())}
   R['p16.1']=A.q13&&R.p16==='Sí'?A.q13.trim():'';
-  {const brand=A.q14||'';const t=NZ(brand);let fl=raw.salFl;if(fl==null&&t.trim())fl=/emsal|quimpac|fluor/.test(t)?true:(/no tiene|no mostro|no hay|sin sal/.test(t)?false:null);
+  {const brand=A.q14||'';const t=NZ(brand);let fl=raw.salFl;if(fl==null&&NSB(brand))fl=false;if(fl==null&&t.trim())fl=/emsal|quimpac|fluor/.test(t)?true:(/no tiene|no mostro|no hay|sin sal/.test(t)?false:null);
     if(!t.trim()&&fl==null)set('p17',null);else if(fl==null)set('p17',null,'¿El paquete dice flúor? Márcalo abajo','revisar');else set('p17',fl?'Consume':'No consume',fl?'sal fluorurada':'sal sin flúor')}
   {const tx=A.q16||'';if(!tx.trim())set('p18',null);else{const e=compEval('p18',tx,(raw.cp||{}).p18);set('p18',e.v,e.det[0]?'elige por el flúor':'no menciona el flúor')}}
   CAP_ACT.forEach(k=>set(k,(raw.lik||{})[k]||null));
@@ -1194,7 +1213,7 @@ function capPrefill(){
   if(!G.edad){const y=P.nac?ageOf(P.nac,G.fecha):null;const e=y!=null&&y>=0?y:P.edad;if(e!=null&&e!==''){G.edad=String(e);ch=true}}
   if(ch){capPersist();capFill();const m=$('#capPref');m.textContent='Datos personales cargados de '+P.nombre+' ('+(P.fuente._t?P.fuente.toma:P.fuente.tipo)+', '+toDMY(P.fuente.fecha)+').';m.classList.remove('hide');setTimeout(()=>m.classList.add('hide'),6000)}
 }
-$('#capNew').onclick=()=>{$('#apodMsg').classList.add('hide');G=capNew();capMissShow=false;capPersist();capFill();$('#capMsg').classList.add('hide');window.scrollTo(0,0)};
+$('#capNew').onclick=()=>{$('#cScanMsg').classList.add('hide');$('#apodMsg').classList.add('hide');G=capNew();capMissShow=false;capPersist();capFill();$('#capMsg').classList.add('hide');window.scrollTo(0,0)};
 $('#capSave').onclick=()=>{
   const m=$('#capMsg');m.className='msg';
   const errs=[];if(!G.nombre.trim())errs.push('nombre');if(!(+G.edad>0))errs.push('edad');if(!G.sexo)errs.push('sexo');if(capMenor()&&!(G.apod||'').trim())errs.push('apoderado (menor de 12 años)');
@@ -1204,9 +1223,10 @@ $('#capSave').onclick=()=>{
   if(!G.id&&capConfirm!==key+'dup'){const dup=allCapso().find(r=>norm(r.nombre)===norm(G.nombre)&&r.toma===G.toma);
     if(dup){capConfirm=key+'dup';m.textContent='Ya hay un '+G.toma+' de '+dup.nombre+' ('+toDMY(dup.fecha)+'). Toca «Guardar» otra vez si es otra persona.';m.classList.remove('hide');return}}
   const now=Date.now(),id=G.id||('c'+now.toString(36)+Math.random().toString(36).slice(2,7));
-  const rec={_t:'capso',id,nombre:G.nombre.trim(),edad:+G.edad,sexo:G.sexo,grado:G.grado,instr:capCom()?(G.instr||''):'',apod:capMenor()?(G.apod||'').trim():'',colegio:G.colegio||'',toma:G.toma,fecha:G.fecha,raw:G.raw,resp:capDerive(G.raw).R,creado:G.creado||now,actualizado:now};
+  const rec={_t:'capso',id,nombre:G.nombre.trim(),dni:G.dni||'',dir:G.dir||'',edad:+G.edad,sexo:G.sexo,grado:G.grado,instr:capCom()?(G.instr||''):'',apod:capMenor()?(G.apod||'').trim():'',colegio:G.colegio||'',toma:G.toma,fecha:G.fecha,raw:G.raw,resp:capDerive(G.raw).R,creado:G.creado||now,actualizado:now};
   pending[id]=JSON.parse(JSON.stringify(rec));LS.set(LSP+'pending',pending);
-  const nm=rec.nombre;G=capNew();G.grado=rec.grado;G.colegio=rec.colegio;G.toma=rec.toma;G.fecha=rec.fecha;capMissShow=false;capConfirm=null;capPersist();capFill();
+  if(G._scan){try{aprLearnCap(G._scan,rec)}catch(e){}}
+  $('#cScanMsg').classList.add('hide');const nm=rec.nombre;G=capNew();G.grado=rec.grado;G.colegio=rec.colegio;G.toma=rec.toma;G.fecha=rec.fecha;capMissShow=false;capConfirm=null;capPersist();capFill();
   $('#apodMsg').classList.add('hide');m.className='msg ok';m.textContent='CAPSO guardado: '+nm+'. Listo para la siguiente persona (se mantienen grado, colegio, toma y fecha).';m.classList.remove('hide');
   window.scrollTo({top:0,behavior:'smooth'});renderList();flush();
 };
@@ -1486,6 +1506,7 @@ onAuthStateChanged(auth,u=>{
   $('#login').classList.add('hide');
   db=fsdb;dbState=navigator.onLine?'connecting':'offline';
   unsubP=db.collection('padron').onSnapshot(snap=>{const ch=[];let meta=null;snap.docs.forEach(d=>{const v=d.data();if(!v)return;if(d.id==='meta')meta=v;else if(Array.isArray(v.items))ch.push([d.id,v.items])});ch.sort((a,b)=>a[0].localeCompare(b[0]));PADRON=ch.flatMap(c=>c[1]);padInfo(meta);padDxShow();if(F.nombre&&!F.hc&&padComplete(F,true)){persist();fillForm()}},()=>{});
+  if(window.__unsubA)window.__unsubA();window.__unsubA=db.collection('aprendizaje').onSnapshot(snap=>{snap.docs.forEach(d=>{if(d.id==='patrones'){const v=d.data();if(v&&v.p&&!aprDirty){APR=v.p;LS.set('apr_cache',APR);aprRender()}}})},err=>{});
   unsubC=db.collection(COL_C).onSnapshot(snap=>{const m={};snap.docs.forEach(d=>{const v=d.data();if(v)m[d.id]=v});capRemote=m;LS.set(LSP+'capcache',capRemote);updatePill();if(window.__capRefresh)window.__capRefresh()},err=>{});
   unsub=db.collection(COL_R).onSnapshot(snap=>{
     const m={};snap.docs.forEach(d=>{const v=d.data();if(v)m[d.id]=v});
@@ -1495,6 +1516,382 @@ onAuthStateChanged(auth,u=>{
   flush();
   if(!ENV.suffix)setTimeout(migrateBeta,1500);
 });
+/* ---- escáner de fichas (solo con internet) ---- */
+const SCAN_URL=CFG.SCAN_URL||'';
+function scanVis(){const on=!!(SCAN_URL&&navigator.onLine&&auth.currentUser);$('#scanBar').classList.toggle('hide',!on);$('#cScanBar').classList.toggle('hide',!on)}
+addEventListener('online',scanVis);addEventListener('offline',()=>{scanVis();scanBusy=false});onAuthStateChanged(auth,scanVis);
+let scanBusy=false;
+function scanMsg(t,ok){const m=$('#scanMsg');m.className='msg'+(ok?' ok':'');m.innerHTML=t;m.classList.toggle('hide',!t)}
+async function scanPrep(file){
+  const url=URL.createObjectURL(file);
+  try{const img=await new Promise((res,rej)=>{const i=new Image();i.onload=()=>res(i);i.onerror=()=>rej(new Error('img'));i.src=url});
+    const M=1568,k=Math.min(1,M/Math.max(img.naturalWidth,img.naturalHeight)),w=Math.round(img.naturalWidth*k),h=Math.round(img.naturalHeight*k);
+    const c=document.createElement('canvas');c.width=w;c.height=h;const g=c.getContext('2d');g.fillStyle='#fff';g.fillRect(0,0,w,h);g.drawImage(img,0,0,w,h);
+    return{media_type:'image/jpeg',data:c.toDataURL('image/jpeg',0.85).split(',')[1]}}
+  finally{URL.revokeObjectURL(url)}
+}
+async function scanSend(files,extra){
+  const images=[];for(const f of files)images.push(await scanPrep(f));
+  const tok=await auth.currentUser.getIdToken();
+  const ac=new AbortController(),to=setTimeout(()=>ac.abort(),180000);
+  let r;try{r=await fetch(SCAN_URL,{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+tok},body:JSON.stringify(Object.assign({images},extra||{})),signal:ac.signal})}finally{clearTimeout(to)}
+  const out=await r.json().catch(()=>({}));
+  if(!r.ok||!out.ok)throw new Error(out.error||('Error '+r.status));
+  return out;
+}
+function scanApply(d){
+  const Q=new Set((d.dudas||[]).map(x=>String(x).toLowerCase())),T=[],f=newForm(),s=x=>String(x==null?'':x).trim();
+  f.nombre=s(d.nombre).replace(/\s+/g,' ').toUpperCase();
+  f.sexo=/^f/i.test(s(d.sexo))?'Femenino':/^m/i.test(s(d.sexo))?'Masculino':'';
+  f.dir=s(d.direccion);
+  const col=s(d.colegio);f.colegio=/(dos|2)\s*de\s*mayo/i.test(col)?'I.E. Dos de Mayo':col;
+  const g=parseInt(s(d.grado),10),sc=s(d.seccion).toUpperCase().replace(/[^A-D]/g,'').slice(0,1);
+  if(g>=1&&g<=5&&sc)f.grado=g+'º '+sc;else if(!col&&!s(d.grado))f.grado='Comunidad / domicilio';else{f.grado='';if(s(d.grado)||sc)Q.add('grado')}
+  const fe=s(d.fecha_examen),fn=s(d.fecha_nacimiento);
+  f.fecha=toISO(fe)||today();if(fe&&!toISO(fe))Q.add('fecha_examen');
+  f.nac=toISO(fn)||'';if(fn&&!f.nac)Q.add('fecha_nacimiento');
+  const y=ageOf(f.nac,f.fecha);f.edad=y!=null&&y>=0&&y<=110?String(y):(String(parseInt(s(d.edad),10)||'')||'');
+  if(y!=null&&parseInt(s(d.edad),10)&&parseInt(s(d.edad),10)!==y)Q.add('edad');
+  f.edadYMD=ageYMD(f.nac,f.fecha)||'';
+  const dn=s(d.dni).replace(/\D/g,'');f.dni=dn.slice(0,8);if(dn&&dn.length!==8)Q.add('dni');
+  f.sis=s(d.sis);f.obs=s(d.observaciones);
+  (d.estomatologico||[]).forEach(e=>{if(f.est[e.item]){const v=s(e.valor).toUpperCase();f.est[e.item]={v:v==='SI'||v==='SÍ'?'SI':'NO',d:v==='SI'||v==='SÍ'?s(e.detalle):''}}});
+  const iv=v=>{v=s(v).toUpperCase();return/^[0-3]$/.test(v)?+v:v==='NR'?'x':null};
+  for(let i=0;i<6;i++){f.iho[i]=iv((d.ipb||[])[i]);f.ipc[i]=iv((d.ipc||[])[i])}
+  const P=(d.piezas||[]).filter(p=>p&&ALLN.includes(+p.n));
+  const hasD=P.some(p=>isDec(+p.n)),hasP=P.some(p=>!isDec(+p.n));
+  f.dent=hasD&&hasP?'M':hasD?'D':'P';
+  f.pos=blankPos(f.dent,f.edad);
+  for(const p of P){const n=+p.n,t=f.pos[n],c=s(p.pieza).toUpperCase(),cr=p.caras||{};
+    if(['4','5','7','8','9'].includes(c)){t.m=c;t.f=null;t.s=S0()}
+    else if(c==='X'){t.m=isDec(n)?'x':'8';t.f=null;t.s=S0()}
+    else{t.m=null;t.f=c==='10'||c==='11'?c:null;for(const k of faces(PP(n))){const v=s(cr[k]);t.s[k]=['0','1','2','3','6'].includes(v)?v:'0'}}
+    if(f.dent==='M'){const q=Math.floor(n/10),pp=PP(n);
+      if(isDec(n)){const pe=(q-4)*10+pp;if(f.pos[pe]&&!P.some(x=>+x.n===pe))f.pos[pe]={m:'8',f:null,s:S0()}}
+      else if(pp<=5){const de=(q+4)*10+pp;if(f.pos[de]&&!P.some(x=>+x.n===de))f.pos[de]={m:'x',f:null,s:S0()}}}
+    if(p.duda)T.push(n)}
+  f.touched=true;
+  return{f,Q,T};
+}
+const SCANF={nombre:'#fNom',sexo:'#fSexo',direccion:'#fDir',colegio:'#fColS',grado:'#fGrado',seccion:'#fGrado',fecha_examen:'#fFecha',fecha_nacimiento:'#fNac',edad:'#fEdad',dni:'#fDni',sis:'#fSis',estomatologico:'#est',ipb:'#iho',ipc:'#iho',observaciones:'#fObs'};
+function scanMark(Q){document.querySelectorAll('.scanq').forEach(e=>e.classList.remove('scanq'));
+  Q.forEach(k=>{const el=SCANF[k]&&$(SCANF[k]);if(!el)return;el.classList.add('scanq');const off=()=>{el.classList.remove('scanq');el.removeEventListener('input',off);el.removeEventListener('change',off);el.removeEventListener('click',off)};el.addEventListener('input',off);el.addEventListener('change',off);if(el.id==='est'||el.id==='iho')el.addEventListener('click',off)})}
+$('#bScan').onclick=()=>{if(scanBusy)return;if(!navigator.onLine){scanMsg('Sin conexión: el escáner necesita internet.');return}
+  if((F.nombre||F.touched)&&!confirm('Lo que está en el formulario se reemplazará por lo que se lea de la ficha. ¿Continuar?'))return;
+  $('#scanFile').value='';$('#scanFile').click()};
+$('#scanFile').onchange=async e=>{
+  const files=[...e.target.files].slice(0,2);if(!files.length)return;
+  scanBusy=true;const b=$('#bScan');b.disabled=true;b.textContent='Leyendo…';scanMsg('Leyendo la ficha… suele tardar entre 20 y 60 segundos. No cierres la app.',true);
+  try{
+    const out=await scanSend(files,{system:CPOD_PROMPT+aprHint('cpod'),schema:CPOD_SCHEMA});
+    const {f,Q,T}=scanApply(out.data||{});
+    F=f;F._scan=JSON.parse(JSON.stringify(f));cur=T.find(n=>visible(F.dent,n))||firstOf(F.dent);persist();fillForm();scanMark(Q);
+    const lab={nombre:'nombre',sexo:'sexo',direccion:'dirección',colegio:'colegio',grado:'grado',seccion:'sección',fecha_examen:'fecha de examen',fecha_nacimiento:'fecha de nacimiento',edad:'edad',dni:'DNI',sis:'SIS',estomatologico:'examen estomatológico',ipb:'IHO (placa blanda)',ipc:'IHO (placa calcificada)',observaciones:'observaciones'};
+    const dq=[...Q].map(k=>lab[k]).filter(Boolean),tq=T.filter(n=>visible(F.dent,n));
+    let t='<b>Ficha leída. Aún no se ha guardado.</b> Compárala con la ficha en papel antes de guardar.';
+    if(dq.length)t+='<br>Revisa (en naranja): '+esc([...new Set(dq)].join(', '))+'.';
+    if(tq.length)t+='<br>Piezas con lectura dudosa: '+tq.join(', ')+' (la primera ya está seleccionada).';
+    if(out.data&&out.data.nota)t+='<br>Nota: '+esc(out.data.nota);
+    scanMsg(t,!dq.length&&!tq.length);window.scrollTo(0,0);
+  }catch(err){scanMsg(err&&err.name==='AbortError'?'La lectura tardó demasiado. Revisa la señal e intenta de nuevo.':'No se pudo leer la ficha: '+esc(err&&err.message||'error')+'. El formulario no se modificó.')}
+  finally{scanBusy=false;b.disabled=false;b.textContent='📷 Escanear ficha CPOD'}
+};
+/* ---- aprendizaje del escáner (correcciones del usuario) ---- */
+const CPOD_PROMPT = `Eres un asistente que transcribe fichas epidemiológicas de salud oral en papel (Universidad Peruana Cayetano Heredia, Departamento de Odontología Social) llenadas a mano por un interno de odontología. Transcribe EXACTAMENTE lo escrito; no inventes ni deduzcas datos clínicos que no estén marcados. Si algo es ilegible o dudoso, deja el campo vacío o con tu mejor lectura y agrégalo a "dudas".
+
+Estructura de la ficha (página 1):
+I. DATOS PERSONALES: Apellidos y Nombres; Género (M/F encerrado en un círculo); Dirección; Colegio; Grado; Sección. A la derecha, tabla día/mes/año con Fecha de examen (A) y Fecha de nacimiento (B); debajo Edad (A-B), DNI y SIS.
+II. EXAMEN ESTOMATOLÓGICO (solo lo anormal): ATM, Ganglios, Queilitis, Lengua, Aftas, Otros; cada uno con NO / SI encerrado y una línea para describir.
+III. IHO-S: seis columnas (16/17, 11/21, 26/27, 36/37, 31/41, 46/47) con fila IPB (placa blanda) y fila IPC (placa calcificada); valores 0, 1, 2, 3 o NR (no registrable). Puede haber una pieza sustituta anotada entre paréntesis.
+IV. REGISTRO DE CARIES: dos arcadas, 16 columnas cada una. Cada columna tiene el número de la pieza permanente arriba a la izquierda y, en las columnas centrales, el de la decidua abajo a la derecha; la pieza examinada se encierra en un círculo. Debajo: fila "Pieza" (código de la pieza completa) y filas por superficie. Superior: O, P, D, V, M. Inferior: O, L, D, V, M. P (palatino) y L (lingual) son la misma cara "L". Los incisivos y caninos no tienen fila O.
+Códigos de superficie: 0 sana, 1 caries, 2 obturada con caries, 3 obturada sin caries, 6 sellante.
+Códigos de pieza: 4 perdida por caries, 5 perdida por otra razón, 7 pilar de puente, 8 permanente no erupcionada, 9 no registrable, 10 traumatismo, 11 hipoplasia.
+Al pie: Observaciones.
+
+Reglas para "piezas":
+- Devuelve un elemento por cada columna que tenga algo escrito o un círculo. Usa el número FDI de la pieza CIRCULADA; si no hay círculo, usa la permanente.
+- "pieza" es el código de la fila Pieza tal como está ("" si vacío). Si en la fila Pieza hay un código de superficie (0–3, 6) es solo el resumen: ponlo igual.
+- "caras": el código escrito en cada fila de superficie de esa columna ("" si vacía). Usa la clave L para P o L.
+- Si una columna está tachada o tiene X sin código, pon pieza "X".
+- Marca "duda": true en la pieza si algún número es poco legible.
+Fechas en formato DD/MM/AAAA. Sexo "Femenino" o "Masculino". Si la ficha no corresponde a este formato, devuelve campos vacíos y explícalo en "nota".`;
+const CPOD_SCHEMA = {
+  type: "object",
+  properties: {
+    nombre: { type: "string" },
+    sexo: { type: "string", enum: ["", "Femenino", "Masculino"] },
+    direccion: { type: "string" },
+    colegio: { type: "string" },
+    grado: { type: "string", description: "Número de grado, p. ej. 3" },
+    seccion: { type: "string", description: "Letra de sección, p. ej. B" },
+    fecha_examen: { type: "string" },
+    fecha_nacimiento: { type: "string" },
+    edad: { type: "string" },
+    dni: { type: "string" },
+    sis: { type: "string" },
+    estomatologico: {
+      type: "array",
+      items: {
+        type: "object",
+        properties: {
+          item: { type: "string", enum: ["ATM", "Ganglios", "Queilitis", "Lengua", "Aftas", "Otros"] },
+          valor: { type: "string", enum: ["", "NO", "SI"] },
+          detalle: { type: "string" }
+        },
+        required: ["item", "valor", "detalle"]
+      }
+    },
+    ipb: { type: "array", items: { type: "string" }, description: "6 valores en orden 16/17, 11/21, 26/27, 36/37, 31/41, 46/47: '0'-'3', 'NR' o ''" },
+    ipc: { type: "array", items: { type: "string" }, description: "Igual que ipb, para placa calcificada" },
+    piezas: {
+      type: "array",
+      items: {
+        type: "object",
+        properties: {
+          n: { type: "integer" },
+          pieza: { type: "string" },
+          caras: {
+            type: "object",
+            properties: { O: { type: "string" }, L: { type: "string" }, D: { type: "string" }, V: { type: "string" }, M: { type: "string" } },
+            required: ["O", "L", "D", "V", "M"]
+          },
+          duda: { type: "boolean" }
+        },
+        required: ["n", "pieza", "caras", "duda"]
+      }
+    },
+    observaciones: { type: "string" },
+    dudas: { type: "array", items: { type: "string" }, description: "Nombres de los campos dudosos: nombre, sexo, direccion, colegio, grado, seccion, fecha_examen, fecha_nacimiento, edad, dni, sis, estomatologico, ipb, ipc, observaciones" },
+    nota: { type: "string" }
+  },
+  required: ["nombre", "sexo", "direccion", "colegio", "grado", "seccion", "fecha_examen", "fecha_nacimiento", "edad", "dni", "sis", "estomatologico", "ipb", "ipc", "piezas", "observaciones", "dudas", "nota"]
+};
+let APR=LS.get('apr_cache',{}),aprDirty=false;
+function aprAdd(t,key,txt,ej){const o=APR[key]||(APR[key]={t,txt,n:0,ej:[]});o.n++;o.txt=txt;o.ult=today();if(ej!=null&&ej!==''){ej=String(ej);o.ej=[ej,...(o.ej||[]).filter(x=>x!==ej)].slice(0,5)}aprDirty=true}
+function aprSave(){if(!aprDirty)return;aprDirty=false;LS.set('apr_cache',APR);if(db)try{db.collection('aprendizaje').doc('patrones').set({p:APR,actualizado:Date.now()})}catch(e){}aprRender()}
+function aprHint(t){const L=Object.values(APR).filter(o=>o.t===t||o.t==='num').sort((a,b)=>b.n-a.n||String(b.ult).localeCompare(String(a.ult))).slice(0,20);
+  if(!L.length)return'';
+  return'\n\nCORRECCIONES PREVIAS DE ESTE USUARIO (errores de lectura que ya corrigió en hojas anteriores escritas con la misma letra; tenlos en cuenta, pero transcribe siempre lo que realmente está en esta hoja):\n'+L.map(o=>'- '+o.txt+(o.ej&&o.ej.length?' (ej.: '+o.ej.join(', ')+')':'')+' ['+o.n+(o.n>1?' veces':' vez')+']').join('\n')}
+const aprV=v=>v==null||v===''?'vacío':v==='x'?'NR':String(v);
+function aprDigits(a,b,where){a=String(a||'');b=String(b||'');if(!a||!b||a===b||a.length!==b.length)return;for(let i=0;i<a.length;i++){const x=a[i],y=b[i];if(x!==y&&/\d/.test(x)&&/\d/.test(y))aprAdd('num','dig:'+x+'>'+y,'En números escritos a mano leíste «'+x+'» cuando era «'+y+'»',where)}}
+const aprWords=t=>norm(t).replace(/[^a-z0-9ñ ]/g,' ').split(' ').filter(w=>w.length>=3);
+function aprText(a,b,where){if(norm(a)===norm(b))return;const A=aprWords(a),B=aprWords(b);
+  if(A.length===B.length){A.forEach((x,i)=>{if(x!==B[i])aprAdd('capso','pal:'+x+'>'+B[i],'Leíste la palabra «'+x+'» cuando decía «'+B[i]+'»',where)});return}
+  const ra=A.filter(x=>!B.includes(x)),rb=B.filter(x=>!A.includes(x));
+  if(ra.length===1&&rb.length===1)aprAdd('capso','pal:'+ra[0]+'>'+rb[0],'Leíste la palabra «'+ra[0]+'» cuando decía «'+rb[0]+'»',where);
+  else if(!A.length&&B.length)aprAdd('capso','vacio:'+where,'Dejaste vacía una respuesta que sí estaba escrita',where);
+  else aprAdd('capso','txt:'+where,'Tu transcripción de esta respuesta necesitó varias correcciones; léela con más cuidado',where)}
+function aprLearnCpod(S,R){
+  aprDigits(toDMY(S.nac),toDMY(R.nac),'fecha de nacimiento');aprDigits(toDMY(S.fecha),toDMY(R.fecha),'fecha de examen');aprDigits(S.dni,R.dni,'DNI');aprDigits(S.sis,R.sis,'SIS');
+  if(S.sexo&&R.sexo&&S.sexo!==R.sexo)aprAdd('cpod','sexo','El círculo de Género (M/F) lo leíste al revés','');
+  if(S.grado&&R.grado&&S.grado!==R.grado){const a=S.grado.split(' '),b=R.grado.split(' ');if(a[0]===b[0])aprAdd('cpod','sec:'+a[1]+'>'+b[1],'En la sección leíste «'+a[1]+'» cuando era «'+b[1]+'»','');else aprAdd('cpod','gr:'+a[0]+'>'+b[0],'En el grado leíste «'+a[0]+'» cuando era «'+b[0]+'»','')}
+  EST.forEach(k=>{const a=(S.est||{})[k]||{},b=(R.est||{})[k]||{};if(a.v!==b.v)aprAdd('cpod','est:'+a.v+'>'+b.v,'En el examen estomatológico marcaste «'+a.v+'» cuando estaba encerrado «'+b.v+'»',k)});
+  const SX=['16/17','11/21','26/27','36/37','31/41','46/47'];
+  if(!R.ihoNA)[['iho','IPB'],['ipc','IPC']].forEach(([f,l])=>{for(let i=0;i<6;i++){const a=(S[f]||[])[i],b=(R[f]||[])[i];if(a!==b&&!(a==null&&b==null))aprAdd('cpod','iho:'+aprV(a)+'>'+aprV(b),'En el IHO-S leíste «'+aprV(a)+'» cuando era «'+aprV(b)+'»',l+' '+SX[i])}});
+  if(S.dent!==R.dent){aprAdd('cpod','dent:'+S.dent+'>'+R.dent,'Interpretaste la dentición como '+({P:'permanente',M:'mixta',D:'decidua'})[S.dent]+' cuando era '+({P:'permanente',M:'mixta',D:'decidua'})[R.dent]+' (revisa qué número está circulado en cada columna)','');return}
+  const lab=m=>m==null?'sin código':m==='x'||m==='8'?'ausente/'+m:m;
+  for(const n of ALLN){if(!visible(R.dent,n))continue;const a=S.pos[n],b=R.pos[n];if(!a||!b)continue;
+    if(a.m!==b.m){aprAdd('cpod','pz:'+lab(a.m)+'>'+lab(b.m),'En la fila «Pieza» leíste «'+lab(a.m)+'» cuando era «'+lab(b.m)+'»','pieza '+n);continue}
+    if((a.f||'')!==(b.f||''))aprAdd('cpod','fl:'+(a.f||'-')+'>'+(b.f||'-'),'En la fila «Pieza» leíste «'+(a.f||'sin 10/11')+'» cuando era «'+(b.f||'sin 10/11')+'»','pieza '+n);
+    if(b.m)continue;const up=[1,2,5,6].includes(Math.floor(n/10));
+    for(const k of faces(PP(n))){const x=a.s[k],y=b.s[k];if(x!==y){const row=k==='L'?(up?'P':'L'):k;aprAdd('cpod','cara:'+x+'>'+y,'En las filas de superficie leíste «'+x+'» cuando era «'+y+'»',n+' fila '+row)}}}
+  aprSave()}
+function aprLearnCap(Sg,R){
+  const S=Sg.raw||{},A=S.a||{},B=(R.raw||{}).a||{};
+  aprDigits(Sg.edad,R.edad,'edad');aprDigits(toDMY(Sg.fecha),toDMY(R.fecha),'fecha');
+  if(Sg.sexo&&R.sexo&&Sg.sexo!==R.sexo)aprAdd('capso','csexo','Leíste el sexo al revés','');
+  const QN={q1why:'1',q2:'2',q21:'2.1',q3:'3',q4:'4',q5:'5',q61:'6.1',q62:'6.2',q63:'6.3',q8:'8',q9:'9',q101:'10.1',q11:'11',q111:'11.1',q112:'11.2',q12:'12',q13:'13',q14:'14',q151:'15.1',q16:'16'};
+  Object.entries(QN).forEach(([k,n])=>aprText(A[k]||'',B[k]||'','P'+n));
+  ['q6','q15'].forEach(k=>{if((A[k]||'')!==(B[k]||''))aprAdd('capso','yn:'+aprV(A[k])+'>'+aprV(B[k]),'En una pregunta Sí/No leíste «'+aprV(A[k])+'» cuando era «'+aprV(B[k])+'»','P'+k.slice(1))});
+  if((A.q10||'')!==(B.q10||''))aprAdd('capso','q10:'+aprV(A.q10)+'>'+aprV(B.q10),'En «veces al día que se cepilla» leíste «'+aprV(A.q10)+'» cuando era «'+aprV(B.q10)+'»','P10');
+  if(!!A.q7none!==!!B.q7none)aprAdd('capso','q7none','En la pregunta 7 confundiste «no consumió nada» con una lista de alimentos','P7');
+  [['f1','P1'],['f7','P7']].forEach(([f,w])=>{const a=(S[f]||[]).map(norm),b=((R.raw||{})[f]||[]).map(norm);const ra=a.filter(x=>!b.includes(x)),rb=b.filter(x=>!a.includes(x));
+    if(ra.length&&ra.length===rb.length)ra.forEach((x,i)=>aprAdd('capso','pal:'+x+'>'+rb[i],'Leíste el alimento «'+x+'» cuando decía «'+rb[i]+'»',w));
+    else if(!ra.length&&rb.length)aprAdd('capso','faltan:'+w,'Omitiste alimentos que sí estaban escritos en la lista',w)});
+  if(S.salFl!==(R.raw||{}).salFl&&S.salFl!=null)aprAdd('capso','sal','Leíste mal si la sal tenía flúor','P14');
+  for(let i=17;i<=24;i++){const k=LIKK[i-17],a=(S.lik||{})[k],b=((R.raw||{}).lik||{})[k];if(a!==b)aprAdd('capso','lik:'+aprV(a)+'>'+aprV(b),'En actitudes leíste «'+aprV(a)+'» cuando estaba marcado «'+aprV(b)+'»','P'+i)}
+  aprSave()}
+function aprRender(){const box=$('#aprList');if(!box)return;const L=Object.entries(APR).sort((a,b)=>b[1].n-a[1].n);
+  if(!L.length){box.innerHTML='<div class="muted" style="font-size:13px">Todavía nada. Escanea una ficha, corrige lo que haga falta y guárdala.</div>';return}
+  const T={cpod:'Ficha CPOD',capso:'CAPSO',num:'Números'};
+  box.innerHTML=L.map(([k,o])=>'<div class="row" style="justify-content:space-between;gap:8px;padding:6px 0;border-top:1px solid var(--bd)"><div style="flex:1;min-width:200px;font-size:13px"><span class="badge">'+T[o.t]+'</span> '+esc(o.txt)+(o.ej&&o.ej.length?' <span class="muted">(ej.: '+esc(o.ej.join(', '))+')</span>':'')+'</div><b style="font-size:13px">'+o.n+'×</b><button class="btn sm" data-aprdel="'+esc(k)+'">Olvidar</button></div>').join('')
+   +'<div class="muted" style="font-size:12px;margin-top:6px">Al escanear se envían los 20 más frecuentes.</div>';
+  box.querySelectorAll('[data-aprdel]').forEach(b=>b.onclick=()=>{delete APR[b.dataset.aprdel];aprDirty=true;aprSave()})}
+aprRender();
+/* ---- escáner CAPSO (2 caras) ---- */
+const LIKK=CAPQ[2].items.map(it=>it.k); // P17..P24 en orden
+const CAP_PROMPT=`Eres un asistente que transcribe cuestionarios CAPSO (conocimientos, actitudes y prácticas en salud oral) en papel, de la Universidad Peruana Cayetano Heredia, llenados a mano por un interno de odontología durante una entrevista. Recibirás una o dos fotos (las dos caras de la hoja). Transcribe EXACTAMENTE lo que está escrito, con las palabras del entrevistado; no corrijas, no resumas, no evalúes si la respuesta es correcta y no inventes nada. Si una respuesta está vacía, deja "". Si algo es ilegible o dudoso, pon tu mejor lectura y agrega el número de la pregunta (o el nombre del campo) a "dudas".
+
+Datos de la persona (encabezado): nombre y apellidos, edad, sexo, grado y sección (si es escolar), fecha, nombre del apoderado (si lo hay) y grado de instrucción (si lo hay).
+
+I. CONOCIMIENTOS
+1. Mencione 5 alimentos que causen daño a sus dientes y ¿por qué? → q1_alimentos (lista, un alimento por elemento) y q1_porque.
+2. ¿Por qué es importante cepillarse los dientes? → q2
+2.1 ¿Qué elementos debe emplear para la limpieza de la boca? → q21
+3. ¿Qué partes de la boca tiene que limpiar diariamente? → q3
+4. ¿Cada cuánto tiempo se debe ir al dentista? → q4
+5. ¿A qué edad se debería ir por primera vez al dentista? → q5
+6. Sabe usted ¿qué es el flúor? (Sí/No) → q6
+6.1 ¿Qué acción tiene? → q61 · 6.2 ¿Qué alimentos tienen flúor? → q62 · 6.3 ¿En qué otros productos se puede encontrar el flúor? → q63
+II. PRÁCTICAS
+7. ¿Qué alimentos consumió ayer fuera de las tres comidas principales? → q7_alimentos (lista). Si dice que nada, q7_nada = true.
+8. ¿A alguno le agregó azúcar? ¿Cuáles? → q8
+9. ¿Qué emplea para la limpieza de su boca? → q9
+10. ¿Cuántas veces al día se cepilla? → q10 (solo el número; "4 o más" si son 4 o más)
+10.1 ¿En qué momentos del día se cepilla? → q101
+11. ¿Hace cuánto tiempo visitó al dentista? → q11 · 11.1 ¿En qué lugar? → q111 · 11.2 ¿Motivo? → q112
+12. ¿Qué hace cuando tiene dolor de muela? → q12
+13. ¿Qué remedio o producto casero emplea? → q13
+14. Paquete de sal: marca y concentración de flúor → q14_marca; q14_fluor = "Sí" si anotaron que tiene flúor, "No" si anotaron que no tiene, "" si no se sabe.
+15. ¿Usa pasta dental? (Sí/No) → q15 · 15.1 ¿Por qué? → q151
+16. ¿En qué se basa para elegir la marca de pasta dental? → q16
+III. ACTITUDES (opción marcada: "De acuerdo", "Ni de acuerdo ni en desacuerdo" o "En desacuerdo")
+17. Para evitar la caries es importante disminuir el consumo de dulces → l17
+18. El tiempo que dura mi cepillo depende del número de veces que me cepillo → l18
+19. El cepillo puede ser compartido por varios miembros de la familia → l19
+20. Se debe visitar al dentista solamente cuando existe dolor de muela → l20
+21. La elección de una pasta dental depende solamente del precio → l21
+22. Para comprar una bolsa de sal solo nos fijamos en el precio → l22
+23. Se deben reemplazar los dulces por frutas en las comidas → l23
+24. Las personas se interesan en su salud cuando visitan al dentista por lo menos una vez al año → l24
+Si la numeración de la hoja es algo distinta, guíate por el texto de la pregunta. Fecha en formato DD/MM/AAAA. Sexo "Femenino" o "Masculino".`;
+const CS=()=>({type:'string'}),LIKE={type:'string',enum:['','De acuerdo','Ni de acuerdo ni en desacuerdo','En desacuerdo']},YN={type:'string',enum:['','Sí','No']};
+const CAP_SCHEMA=(()=>{const P={nombre:CS(),edad:CS(),sexo:{type:'string',enum:['','Femenino','Masculino']},grado:CS(),seccion:CS(),fecha:CS(),apoderado:CS(),instruccion:CS(),
+  q1_alimentos:{type:'array',items:CS()},q1_porque:CS(),q2:CS(),q21:CS(),q3:CS(),q4:CS(),q5:CS(),q6:YN,q61:CS(),q62:CS(),q63:CS(),
+  q7_alimentos:{type:'array',items:CS()},q7_nada:{type:'boolean'},q8:CS(),q9:CS(),q10:CS(),q101:CS(),q11:CS(),q111:CS(),q112:CS(),q12:CS(),q13:CS(),q14_marca:CS(),q14_fluor:YN,q15:YN,q151:CS(),q16:CS()};
+  for(let i=17;i<=24;i++)P['l'+i]=LIKE;P.dudas={type:'array',items:CS()};P.nota=CS();
+  return{type:'object',properties:P,required:Object.keys(P),additionalProperties:false}})();
+function capScanApply(d){
+  const s=x=>String(x==null?'':x).trim(),g=capNew(),A=g.raw.a,Q=(d.dudas||[]).map(s).filter(Boolean);
+  g.toma=G.toma;g.nombre=s(d.nombre).replace(/\s+/g,' ').toUpperCase();
+  const e=parseInt(s(d.edad),10);g.edad=e>0&&e<111?String(e):'';
+  g.sexo=/^f/i.test(s(d.sexo))?'Femenino':/^m/i.test(s(d.sexo))?'Masculino':'';
+  const gr=parseInt(s(d.grado),10),sc=s(d.seccion).toUpperCase().replace(/[^A-D]/g,'').slice(0,1);
+  if(gr>=1&&gr<=5&&sc)g.grado=gr+'º '+sc;else if(s(d.grado)||sc)Q.push('grado');else g.colegio='';
+  const fe=toISO(s(d.fecha));g.fecha=fe||today();if(s(d.fecha)&&!fe)Q.push('fecha');
+  g.apod=s(d.apoderado);
+  const ins=norm(s(d.instruccion));if(ins){const m=INSTR.find(x=>norm(x)===ins)||INSTR.find(x=>ins&&norm(x).startsWith(ins))||INSTR.find(x=>ins.includes(norm(x)));if(m)g.instr=m;else Q.push('grado de instrucción ('+s(d.instruccion)+')')}
+  const L=a=>(Array.isArray(a)?a:[]).map(s).filter(Boolean);
+  g.raw.f1=L(d.q1_alimentos);A.q1why=s(d.q1_porque);
+  ['q2','q21','q3','q4','q5','q61','q62','q63','q8','q9','q101','q11','q111','q112','q12','q13','q151','q16'].forEach(k=>{A[k]=s(d[k])});
+  A.q6=['Sí','No'].includes(d.q6)?d.q6:'';A.q15=['Sí','No'].includes(d.q15)?d.q15:'';
+  g.raw.f7=L(d.q7_alimentos);A.q7none=!!d.q7_nada&&!g.raw.f7.length;
+  const n10=s(d.q10);const n=parseInt(n10,10);A.q10=/4\s*o\s*m/i.test(n10)||n>=4?'4 o más':(n>=0&&n<=3?String(n):'');if(n10&&A.q10==='')Q.push('10');
+  A.q14=s(d.q14_marca);g.raw.salFl=d.q14_fluor==='Sí'?true:d.q14_fluor==='No'?false:undefined;
+  for(let i=17;i<=24;i++){const v=d['l'+i];if(C_LIK.includes(v))g.raw.lik[LIKK[i-17]]=v}
+  return{g,Q};
+}
+let capScanImgs=[];
+function cScanMsg(t,ok){const m=$('#cScanMsg');m.className='msg'+(ok?' ok':'');m.innerHTML=t;m.classList.toggle('hide',!t)}
+function cScanReset(){capScanImgs=[];$('#cScanStep').classList.add('hide');$('#bCScan').disabled=false;$('#bCScan').textContent='📷 Escanear CAPSO (2 caras)'}
+$('#bCScan').onclick=()=>{if(scanBusy)return;if(!navigator.onLine){cScanMsg('Sin conexión: el escáner necesita internet.');return}
+  const hasAns=G.nombre||Object.values(G.raw.a||{}).some(v=>v)||(G.raw.f1||[]).length||Object.keys(G.raw.lik||{}).length;
+  if(hasAns&&!confirm('Lo que está en el cuestionario se reemplazará por lo que se lea de la hoja. ¿Continuar?'))return;
+  cScanReset();cScanMsg('Toma la foto de la <b>cara 1</b> (o elige las dos fotos juntas desde la galería).',true);$('#cScanFile').value='';$('#cScanFile').click()};
+$('#bCScan2').onclick=()=>{$('#cScanFile').value='';$('#cScanFile').click()};
+$('#bCScanX').onclick=()=>{cScanReset();cScanMsg('')};
+$('#bCScanGo').onclick=()=>capScanRun();
+$('#cScanFile').onchange=e=>{const f=[...e.target.files];if(!f.length)return;capScanImgs.push(...f);capScanImgs=capScanImgs.slice(0,2);
+  if(capScanImgs.length>=2)capScanRun();else{$('#cScanStep').classList.remove('hide');cScanMsg('Cara 1 lista. Ahora toma la foto de la <b>cara 2</b>.',true)}};
+async function capScanRun(){
+  if(scanBusy||!capScanImgs.length)return;scanBusy=true;$('#cScanStep').classList.add('hide');const b=$('#bCScan');b.disabled=true;b.textContent='Leyendo…';
+  cScanMsg('Leyendo el CAPSO ('+capScanImgs.length+' cara'+(capScanImgs.length>1?'s':'')+')… suele tardar entre 30 y 90 segundos. No cierres la app.',true);
+  try{
+    const out=await scanSend(capScanImgs,{system:CAP_PROMPT+aprHint('capso'),schema:CAP_SCHEMA});
+    const {g,Q}=capScanApply(out.data||{});
+    G=g;G._scan=JSON.parse(JSON.stringify(g));capPersist();capFill();if(window.__capRefresh)window.__capRefresh();
+    const D=capDerive(G.raw),rev=CAP_ORDER.filter(k=>D.st[k]==='revisar').map(k=>CQ[k].t.split('.')[0]);
+    let t='<b>CAPSO leído. Aún no se ha guardado.</b> Compáralo con la hoja antes de guardar.';
+    if(Q.length)t+='<br>Lectura dudosa: '+esc(Q.join(', '))+'.';
+    if(rev.length)t+='<br>La clave necesita que revises: '+esc(rev.join(', '))+'.';
+    if(capMenor()&&!G.apod)t+='<br>Es menor de 12 años: completa el nombre del apoderado.';
+    if(out.data&&out.data.nota)t+='<br>Nota: '+esc(out.data.nota);
+    cScanMsg(t,!Q.length&&!rev.length);window.scrollTo(0,0);
+  }catch(err){cScanMsg(err&&err.name==='AbortError'?'La lectura tardó demasiado. Revisa la señal e intenta de nuevo.':'No se pudo leer el CAPSO: '+esc(err&&err.message||'error')+'. El cuestionario no se modificó.')}
+  finally{scanBusy=false;cScanReset()}
+}
+/* ---- dictado del CAPSO (funciona sin internet; análisis local) ---- */
+const NUMW={cero:0,uno:1,una:1,un:1,dos:2,tres:3,cuatro:4,cinco:5,seis:6,siete:7,ocho:8,nueve:9,diez:10,once:11,doce:12,trece:13,catorce:14,quince:15,dieciseis:16,diecisiete:17,dieciocho:18,diecinueve:19,veinte:20,veintiuno:21,veintiun:21,veintidos:22,veintitres:23,veinticuatro:24,primero:1,primera:1,segundo:2,tercero:3,tercer:3,cuarto:4,quinto:5};
+const nw=w=>{w=norm(w).replace(/[^a-z0-9]/g,'');return /^\d+$/.test(w)?+w:(w in NUMW?NUMW[w]:null)};
+const DEC={'61':'6.1','62':'6.2','63':'6.3','101':'10.1','111':'11.1','112':'11.2','151':'15.1'};
+function dictSplit(text){
+  const re=/\bpreguntas?\s*(?:n(?:u|ú)mero\s*)?(\d+|[a-záéíóúñ]+)(?:\s*(?:[.,]|punto)\s*(\d+|[a-záéíóúñ]+))?/gi;
+  const marks=[];let m;while((m=re.exec(text))){const a=nw(m[1]);if(a==null)continue;let b=m[2]!=null?nw(m[2]):null;if(m[2]!=null&&b==null){re.lastIndex=m.index+m[0].length-m[2].length}
+    let k=b!=null?a+'.'+b:String(a);if(DEC[k])k=DEC[k];marks.push({k,i:m.index,e:b!=null||m[2]==null?m.index+m[0].length:m.index+m[0].length-m[2].length})}
+  const head=marks.length?text.slice(0,marks[0].i):text;const seg={};
+  marks.forEach((mk,j)=>{let t=text.slice(mk.e,j+1<marks.length?marks[j+1].i:text.length);t=t.replace(/^[\s:.,;-]*(?:respuesta|responde|respondi[oó]|dice)?[\s:.,;-]*/i,'').replace(/[\s,;.]+$/,'').trim();if(t)seg[mk.k]=t});
+  return{head,seg}}
+function dictFoods(t){let it=splitItems(t.replace(/\s+coma\s+/gi,', '));
+  if(it.length===1&&/\s/.test(it[0])){const multi=[...F_CARIO,...F_AMB,...F_NO].map(x=>x.replace(/^=/,'')).filter(x=>x.includes(' '));let rest=' '+norm(it[0])+' ';const out=[];
+    multi.forEach(mw=>{if(rest.includes(' '+mw+' ')){out.push(mw);rest=rest.replace(' '+mw+' ',' ')}});it=out.concat(rest.trim().split(/\s+/).filter(w=>w.length>2&&!['los','las','con','del','que','muy'].includes(w)))}
+  return it}
+function dictYN(t){const x=' '+norm(t)+' ';if(/^ (si|sí)\b/.test(x)||/ si /.test(x.slice(0,6)))return'Sí';if(/^ no\b/.test(x))return'No';if(/ (si|sí) /.test(x))return'Sí';if(/ no /.test(x))return'No';return''}
+function dictLik(t){const x=norm(t).replace(/deacuerdo/g,'de acuerdo').replace(/[.,;:!]/g,' ').replace(/\s+/g,' ').trim();if(/^no se\b|^no sabe\b/.test(x))return'Ni de acuerdo ni en desacuerdo';if(/ni de acuerdo|ni en desacuerdo|indiferente|neutral|mas o menos|regular/.test(x))return'Ni de acuerdo ni en desacuerdo';if(/desacuerdo|no esta de acuerdo|no estoy de acuerdo|no de acuerdo/.test(x)||/^no\b/.test(x))return'En desacuerdo';if(/de acuerdo|acuerdo|^si\b/.test(x))return'De acuerdo';return''}
+function dictHead(h,g,got){
+  const H=' '+h.replace(/\s+/g,' ')+' ',N=' '+norm(h).replace(/[^a-z0-9ñ/ ]/g,' ').replace(/\s+/g,' ')+' ';
+  const stop='(?=\\s+(?:en\\s+(?:el\\s+)?(?:primer[oa]?|segundo|tercer[oa]?|cuarto|quinto|[1-5])|en\\s+(?:el\\s+)?colegio|en\\s+la\\s+comunidad|con|dni|de\\s+\\d+|\\d+|edad|domicilio|direcci|vive|en\\s+(?:el\\s+)?grado|grado|del\\s+colegio|colegio|comunidad|tomando|capso|sexo|masculino|femenino|var[oó]n|mujer|hombre|apoderad|el\\s+d[ií]a|fecha)\\b|[,.;:]|$)';
+  const mn=H.match(new RegExp('(?:paciente|alumn[oa]|estudiante|nombre(?:s)?(?:\\s+y\\s+apellidos)?|se[nñ]or(?:a|ita)?)\\s*:?\\s+([A-Za-zÁÉÍÓÚÜÑáéíóúüñ ]+?)'+stop,'i'));
+  if(mn){g.nombre=mn[1].trim().replace(/\s+/g,' ').toUpperCase();got.push('nombre')}
+  const md=N.match(/dni\s*(?:numero\s*)?((?:\d\s*){8})/);if(md){g.dni=md[1].replace(/\s/g,'');got.push('DNI')}
+  const me=N.match(/(\d{1,2}|[a-z]+)\s+anos/);if(me&&nw(me[1])!=null){g.edad=String(nw(me[1]));got.push('edad')}
+  if(/ (femenino|mujer|nina|senora|senorita) /.test(N)){g.sexo='Femenino';got.push('sexo')}else if(/ (masculino|varon|hombre|nino) /.test(N)){g.sexo='Masculino';got.push('sexo')}
+  const mg=N.match(/(?:grado\s+)?(primero|segundo|tercero|tercer|cuarto|quinto|[1-5])\s*(?:ro|do|to|vo|°|º|grado|de secundaria|de primaria|año)?\s*(?:grado\s*)?(?:seccion\s*)?(?:letra\s*)?([abcd])\b/);
+  if(mg){g.grado=nw(mg[1])+'º '+mg[2].toUpperCase();got.push('grado')}
+  if(/ (dos|2) de mayo /.test(N)){g.colegio='I.E. Dos de Mayo';got.push('colegio')}
+  if(/ comunidad /.test(N)&&!mg){g.grado='Comunidad / domicilio';g.colegio='';got.push('comunidad')}
+  const mt=N.match(/capso\s*(1|2|3|uno|dos|tres)\b/);if(mt){g.toma=CAP_TOMAS[nw(mt[1])-1];got.push('toma')}
+  if(/(dia de )?hoy/.test(N)){g.fecha=today();got.push('fecha')}
+  const mf=h.match(/(\d{1,2})\s*[\/-]\s*(\d{1,2})\s*[\/-]\s*(\d{4})/);if(mf){const iso=toISO(mf[1]+'/'+mf[2]+'/'+mf[3]);if(iso){g.fecha=iso;if(!got.includes('fecha'))got.push('fecha')}}
+  const MES={enero:1,febrero:2,marzo:3,abril:4,mayo:5,junio:6,julio:7,agosto:8,setiembre:9,septiembre:9,octubre:10,noviembre:11,diciembre:12};
+  const ml=N.match(/(\d{1,2}) de (enero|febrero|marzo|abril|junio|julio|agosto|setiembre|septiembre|octubre|noviembre|diciembre) (?:de |del )?(\d{4})/);if(ml){const iso=toISO(ml[1]+'/'+MES[ml[2]]+'/'+ml[3]);if(iso){g.fecha=iso;if(!got.includes('fecha'))got.push('fecha')}}
+  const mdir=H.match(new RegExp('(?:domicilio|direcci[oó]n|vive)\\s*(?:en|:)?\\s+(.+?)'+stop.replace('domicilio|direcci|vive|',''),'i'));if(mdir){g.dir=mdir[1].trim();got.push('domicilio')}
+  const ma=H.match(new RegExp('apoderad[oa]\\s*(?:es|:)?\\s+([A-Za-zÁÉÍÓÚÜÑáéíóúüñ ]+?)'+stop.replace('apoderad|',''),'i'));if(ma){g.apod=ma[1].trim().replace(/\s+/g,' ').toUpperCase();got.push('apoderado')}
+  const ins=INSTR.find(x=>N.includes(' '+norm(x)+' '));if(ins){g.instr=ins;got.push('instrucción')}
+}
+function dictApply(text){
+  const {head,seg}=dictSplit(text);const got=[],okQ=[],bad=[];
+  const g=JSON.parse(JSON.stringify(G));g.raw=g.raw||{a:{},ovr:{},cp:{},f1:[],f7:[],lik:{}};const A=g.raw.a||(g.raw.a={});g.raw.lik=g.raw.lik||{};
+  dictHead(head,g,got);
+  if(g.dni&&!g.nombre&&typeof padFind==='function'){const x=padFind({dni:g.dni});if(x){g.nombre=x.n;got.push('nombre (padrón)')}}
+  if(g.dni||g.nombre){const x=padFind({dni:g.dni,nombre:g.nombre});if(x){if(!g.sexo&&x.s){g.sexo=x.s;got.push('sexo (padrón)')}if(!g.edad&&x.b){const e=ageOf(x.b,g.fecha||today());if(e!=null&&e>=0){g.edad=String(e);got.push('edad (padrón)')}}}}
+  const TXT={'2':'q2','2.1':'q21','3':'q3','4':'q4','5':'q5','6.1':'q61','6.2':'q62','6.3':'q63','8':'q8','9':'q9','10.1':'q101','11':'q11','11.1':'q111','11.2':'q112','12':'q12','13':'q13','15.1':'q151','16':'q16'};
+  Object.entries(seg).forEach(([k,t])=>{
+    if(TXT[k]){A[TXT[k]]=t;okQ.push(k);return}
+    if(k==='1'&&NSB(t)){g.raw.f1=[];A.q1ns=true;okQ.push(k);return}
+    if(k==='1'){A.q1ns=false;const pq=t.split(/\s+(?:porque|por que|ya que|debido a que)\s+/i);g.raw.f1=dictFoods(pq[0]);if(pq[1])A.q1why=pq.slice(1).join(' porque ');okQ.push(k);return}
+    if(k==='6'){const v=dictYN(t);if(v){A.q6=v;okQ.push(k)}else bad.push(k);return}
+    if((k==='7'||k==='10')&&NSB(t)){bad.push(k);return}
+    if(k==='7'){if(/^(nada|ninguno|ninguna|no consumi[oó]|no comi[oó])/i.test(norm(t))){A.q7none=true;g.raw.f7=[]}else{g.raw.f7=dictFoods(t);A.q7none=false}okQ.push(k);return}
+    if(k==='10'){const w=norm(t).split(/\s+/).map(nw).find(x=>x!=null);if(w!=null){A.q10=w>=4?'4 o más':String(w);okQ.push(k)}else bad.push(k);return}
+    if(k==='14'){A.q14=t;const x=norm(t);if(/sin fluor|no tiene fluor|no contiene/.test(x))g.raw.salFl=false;else if(/fluor|emsal|quimpac/.test(x))g.raw.salFl=true;okQ.push(k);return}
+    if(k==='15'&&NSB(t)){A.q15='No';okQ.push(k);return}
+    if(k==='15'){const v=dictYN(t);if(v){A.q15=v;const r=t.replace(/^\s*(s[ií]|no)(?=[\s,.:;]|$)[\s,.:;]*/i,'').replace(/^(porque|por que)\s+/i,'');if(r)A.q151=r;okQ.push(k)}else bad.push(k);return}
+    const n=parseInt(k,10);if(n>=17&&n<=24&&!k.includes('.')){const v=dictLik(t);if(v){g.raw.lik[LIKK[n-17]]=v;okQ.push(k)}else bad.push(k);return}
+    bad.push(k)});
+  return{g,got,okQ,bad}}
+LS.get(LSP+'dict_txt','')&&($('#cDict').value=LS.get(LSP+'dict_txt',''));
+$('#cDict').oninput=e=>LS.set(LSP+'dict_txt',e.target.value);
+$('#bCDict').onclick=()=>{$('#cDictBox').classList.toggle('hide');if(!$('#cDictBox').classList.contains('hide'))$('#cDict').focus()};
+$('#bCDictClr').onclick=()=>{$('#cDict').value='';LS.set(LSP+'dict_txt','');$('#cDictMsg').classList.add('hide')};
+$('#bCDictGo').onclick=()=>{const t=$('#cDict').value.trim();const m=$('#cDictMsg');if(!t){m.className='msg';m.textContent='Primero dicta o escribe el texto.';m.classList.remove('hide');return}
+  const {g,got,okQ,bad}=dictApply(t);
+  if(!got.length&&!okQ.length){m.className='msg';m.textContent='No encontré datos. Empieza con «paciente …» y di «pregunta 1 …», «pregunta 2 …».';m.classList.remove('hide');return}
+  G=g;capPersist();capFill();if(window.__capRefresh)window.__capRefresh();
+  const all=['1','2','2.1','3','4','5','6','6.1','6.2','6.3','7','8','9','10','10.1','11','11.1','11.2','12','13','14','15','15.1','16','17','18','19','20','21','22','23','24'];
+  const falt=all.filter(k=>!okQ.includes(k)&&!(k.startsWith('6.')&&G.raw.a.q6==='No'));
+  let h='<b>CAPSO llenado desde el dictado. Aún no se ha guardado.</b>';
+  if(got.length)h+='<br>Datos: '+esc(got.join(', '))+'.';
+  h+='<br>Preguntas con respuesta: '+okQ.length+'.';
+  if(bad.length)h+='<br>No entendí la respuesta de: '+bad.map(k=>'P'+k).join(', ')+' (complétalas a mano).';
+  if(falt.length&&falt.length<all.length)h+='<br>Sin dictar: '+falt.map(k=>'P'+k).join(', ')+'.';
+  if(G.dir)h+='<br>El domicilio se guardará con el CAPSO y servirá para el odontograma.';
+  m.className='msg'+(bad.length?'':' ok');m.innerHTML=h;m.classList.remove('hide')};
+{const SR=window.SpeechRecognition||window.webkitSpeechRecognition;if(SR){const b=$('#bCListen');b.classList.remove('hide');let rec=null,on=false;
+  const stop=()=>{on=false;b.textContent='🎙 Escuchar';b.classList.remove('pri');try{rec&&rec.stop()}catch(e){}};
+  b.onclick=()=>{if(on){stop();return}rec=new SR();rec.lang='es-PE';rec.continuous=true;rec.interimResults=false;
+    rec.onresult=e=>{let t='';for(let i=e.resultIndex;i<e.results.length;i++)if(e.results[i].isFinal)t+=e.results[i][0].transcript;if(t){const ta=$('#cDict');ta.value=(ta.value.trim()+' '+t.trim()).trim();LS.set(LSP+'dict_txt',ta.value)}};
+    rec.onend=()=>{if(on){try{rec.start()}catch(e){stop()}}};rec.onerror=e=>{if(e.error==='not-allowed'||e.error==='service-not-allowed'){stop();const m=$('#cDictMsg');m.className='msg';m.textContent='No se pudo usar el micrófono aquí; usa el micrófono del teclado.';m.classList.remove('hide')}};
+    try{rec.start();on=true;b.textContent='⏹ Detener';b.classList.add('pri')}catch(e){stop()}}}}
 /* ---- carga del padrón del C.S. ---- */
 function padInfo(meta){const el=$('#padInfo');if(!el)return;el.textContent=PADRON.length?('Padrón del C.S.: '+PADRON.length+' personas'+(meta&&meta.fecha?' · cargado el '+toDMY(meta.fecha):'')+'. Escribe un nombre, DNI o N.º de historia para buscar.'):'Padrón del C.S.: no cargado.'}
 $('#bPad').onclick=()=>{if(!db){lmsg('Inicia sesión para cargar el padrón.');return}$('#padFile').value='';$('#padFile').click()};
